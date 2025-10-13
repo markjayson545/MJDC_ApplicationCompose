@@ -98,9 +98,10 @@ fun LoginScreen(navController: NavController) {
                     enabled = isLoginEnabled.value,
                     onClick = {
                         if (usernameTextFieldValue.value == "admin" && passwordTextFieldValue.value == "88888") {
+                            val username = usernameTextFieldValue.value
                             usernameTextFieldValue.value = ""
                             passwordTextFieldValue.value = ""
-                            navController.navigate("calculator")
+                            navController.navigate("cart/$username")
                         } else {
                             loginAttempts--
                             if (loginAttempts == 0) {
@@ -132,7 +133,7 @@ fun LoginScreen(navController: NavController) {
                         }
                     }
                 ) {
-                    Text(text = if (loginAttempts > 0) "Login" else "Wait ${timer.value}")
+                    Text(text = if (loginAttempts > 0) "Login" else "Wait ${timer.intValue}")
                 }
             }
             Text(

@@ -40,7 +40,7 @@ class MainActivity : ComponentActivity() {
         val navController = rememberNavController()
         NavHost(
             navController = navController,
-            startDestination = "home"
+            startDestination = "login"
         ) {
             composable("home") {
                 HomeScreen(navController)
@@ -50,6 +50,10 @@ class MainActivity : ComponentActivity() {
             }
             composable("calculator") {
                 CalculatorScreen(navController)
+            }
+            composable("cart/{username}") { backStackEntry ->
+                val username = backStackEntry.arguments?.getString("username")
+                CartScreen(navController, username ?: "")
             }
         }
     }
