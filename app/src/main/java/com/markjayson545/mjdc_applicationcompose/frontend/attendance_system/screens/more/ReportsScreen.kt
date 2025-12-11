@@ -55,7 +55,7 @@
  * @param sharedViewModels Shared ViewModels containing all app state
  * @param onMenuClick Callback to open the navigation drawer
  */
-package com.markjayson545.mjdc_applicationcompose.frontend.attendance_system.screens
+package com.markjayson545.mjdc_applicationcompose.frontend.attendance_system.screens.more
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.layout.Arrangement
@@ -100,7 +100,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController

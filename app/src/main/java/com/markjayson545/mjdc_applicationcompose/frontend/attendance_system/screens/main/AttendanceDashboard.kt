@@ -52,7 +52,7 @@
  * @param sharedViewModels Shared ViewModels containing all app state
  * @param onMenuClick Callback to open the navigation drawer
  */
-package com.markjayson545.mjdc_applicationcompose.frontend.attendance_system.screens
+package com.markjayson545.mjdc_applicationcompose.frontend.attendance_system.screens.main
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
@@ -77,8 +77,8 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LargeTopAppBar
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.MediumTopAppBar
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
@@ -93,14 +93,17 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.markjayson545.mjdc_applicationcompose.backend.attendance_system.model.AttendanceStatus
 import com.markjayson545.mjdc_applicationcompose.bridge.SharedViewModels
+import com.markjayson545.mjdc_applicationcompose.bridge.preferences.AppPreferences
+import com.markjayson545.mjdc_applicationcompose.bridge.preferences.formattedName
 import com.markjayson545.mjdc_applicationcompose.bridge.repository.AttendanceReadinessState
-import com.markjayson545.mjdc_applicationcompose.frontend.attendance_system.components.CompactActivityItem
-import com.markjayson545.mjdc_applicationcompose.frontend.attendance_system.components.CompactStatsCard
+import com.markjayson545.mjdc_applicationcompose.frontend.attendance_system.components.RecentActivityItem
+import com.markjayson545.mjdc_applicationcompose.frontend.attendance_system.components.StatsCard
 import com.markjayson545.mjdc_applicationcompose.frontend.attendance_system.components.InfoBanner
 import com.markjayson545.mjdc_applicationcompose.frontend.attendance_system.components.SetupProgressCard
 import com.markjayson545.mjdc_applicationcompose.frontend.attendance_system.components.WarningBanner
@@ -117,8 +120,14 @@ import java.util.Locale
 fun AttendanceDashboardScreen(
     navController: NavController, sharedViewModels: SharedViewModels, onMenuClick: () -> Unit = {}
 ) {
+    val context = LocalContext.current
     val scrollBehavior =
         TopAppBarDefaults.exitUntilCollapsedScrollBehavior(rememberTopAppBarState())
+
+    // Initialize AppPreferences for name formatting
+    LaunchedEffect(Unit) {
+        AppPreferences.init(context)
+    }
 
     // Get data from ViewModels
     val teacherViewModel = sharedViewModels.teacherViewModel
@@ -175,12 +184,12 @@ fun AttendanceDashboardScreen(
     Scaffold(
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = {
-            MediumTopAppBar(
+            LargeTopAppBar(
                 title = {
                     Column {
                         Text(
                             "Welcome, ${currentTeacher?.firstName ?: "Teacher"}",
-                            style = MaterialTheme.typography.titleLarge,
+                            style = MaterialTheme.typography.headlineMedium,
                             fontWeight = FontWeight.Bold
                         )
                         Text(
@@ -268,17 +277,17 @@ fun AttendanceDashboardScreen(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
-                        CompactStatsCard(
+                        StatsCard(
                             modifier = Modifier.weight(1f),
                             title = "Students",
-                            value = totalStudents,
+                            value = totalStudents.toString(),
                             icon = Icons.Default.Groups,
                             iconTint = Color(0xFF2196F3)
                         )
-                        CompactStatsCard(
+                        StatsCard(
                             modifier = Modifier.weight(1f),
                             title = "Courses",
-                            value = totalCourses,
+                            value = totalCourses.toString(),
                             icon = Icons.Default.Book,
                             iconTint = Color(0xFF9C27B0)
                         )
@@ -295,12 +304,10 @@ fun AttendanceDashboardScreen(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
-                        CompactStatsCard(
+                        StatsCard(
                             modifier = Modifier.weight(1f),
                             title = "Today's Rate",
-                            value = attendanceRate,
-                            suffix = "%",
-                            showValue = totalStudents > 0,
+                            value = if (totalStudents > 0) "$attendanceRate%" else "N/A",
                             icon = Icons.Default.CheckCircle,
                             iconTint = when {
                                 attendanceRate >= 80 -> Color(0xFF4CAF50)
@@ -308,10 +315,10 @@ fun AttendanceDashboardScreen(
                                 else -> Color(0xFFF44336)
                             }
                         )
-                        CompactStatsCard(
+                        StatsCard(
                             modifier = Modifier.weight(1f),
                             title = "Subjects",
-                            value = totalSubjects,
+                            value = totalSubjects.toString(),
                             icon = Icons.AutoMirrored.Filled.MenuBook,
                             iconTint = Color(0xFFFF9800)
                         )
@@ -429,9 +436,9 @@ fun AttendanceDashboardScreen(
                         visible = showContent,
                         enter = bouncyEnterTransition(index = index)
                     ) {
-                        CompactActivityItem(
-                            studentName = student?.fullName ?: "Unknown Student",
-                            subjectCode = subject?.subjectCode ?: "N/A",
+                        RecentActivityItem(
+                            studentName = student?.formattedName() ?: "Unknown Student",
+                            courseName = subject?.subjectCode ?: "N/A",
                             time = checkIn.checkInTime,
                             isPresent = checkIn.status == AttendanceStatus.PRESENT
                         )

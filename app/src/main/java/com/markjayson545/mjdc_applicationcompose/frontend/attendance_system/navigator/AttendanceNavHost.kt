@@ -92,15 +92,15 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.markjayson545.mjdc_applicationcompose.bridge.SharedViewModels
-import com.markjayson545.mjdc_applicationcompose.frontend.attendance_system.screens.AttendanceDashboardScreen
+import com.markjayson545.mjdc_applicationcompose.frontend.attendance_system.screens.main.AttendanceDashboardScreen
 import com.markjayson545.mjdc_applicationcompose.frontend.attendance_system.screens.AuthScreen
-import com.markjayson545.mjdc_applicationcompose.frontend.attendance_system.screens.ManageAttendanceScreen
-import com.markjayson545.mjdc_applicationcompose.frontend.attendance_system.screens.ManageCoursesScreen
-import com.markjayson545.mjdc_applicationcompose.frontend.attendance_system.screens.ManageStudentsScreen
-import com.markjayson545.mjdc_applicationcompose.frontend.attendance_system.screens.ManageSubjectsScreen
-import com.markjayson545.mjdc_applicationcompose.frontend.attendance_system.screens.ManageTeachersScreen
-import com.markjayson545.mjdc_applicationcompose.frontend.attendance_system.screens.ReportsScreen
-import com.markjayson545.mjdc_applicationcompose.frontend.attendance_system.screens.SettingsScreen
+import com.markjayson545.mjdc_applicationcompose.frontend.attendance_system.screens.main.ManageAttendanceScreen
+import com.markjayson545.mjdc_applicationcompose.frontend.attendance_system.screens.management.ManageCoursesScreen
+import com.markjayson545.mjdc_applicationcompose.frontend.attendance_system.screens.management.ManageStudentsScreen
+import com.markjayson545.mjdc_applicationcompose.frontend.attendance_system.screens.management.ManageSubjectsScreen
+import com.markjayson545.mjdc_applicationcompose.frontend.attendance_system.screens.management.ManageTeachersScreen
+import com.markjayson545.mjdc_applicationcompose.frontend.attendance_system.screens.more.ReportsScreen
+import com.markjayson545.mjdc_applicationcompose.frontend.attendance_system.screens.more.SettingsScreen
 import kotlinx.coroutines.launch
 
 /**
@@ -297,10 +297,11 @@ fun AttendanceNavHost(
                         icon = {
                             Icon(
                                 Icons.AutoMirrored.Filled.Logout,
+                                tint = MaterialTheme.colorScheme.error,
                                 contentDescription = null
                             )
                         },
-                        label = { Text("Logout") },
+                        label = { Text("Logout", color = MaterialTheme.colorScheme.error) },
                         selected = false,
                         onClick = {
                             scope.launch {

@@ -1,4 +1,4 @@
-package com.markjayson545.mjdc_applicationcompose.frontend.attendance_system.screens
+package com.markjayson545.mjdc_applicationcompose.frontend.attendance_system.screens.management
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.layout.Arrangement
@@ -17,8 +17,9 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Book
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Search
-import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.CircularWavyProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -43,9 +44,12 @@ import androidx.navigation.NavController
 import com.markjayson545.mjdc_applicationcompose.backend.attendance_system.model.Course
 import com.markjayson545.mjdc_applicationcompose.bridge.SharedViewModels
 import com.markjayson545.mjdc_applicationcompose.frontend.attendance_system.components.CompactItemCard
+import com.markjayson545.mjdc_applicationcompose.frontend.attendance_system.components.CourseSortOption
 import com.markjayson545.mjdc_applicationcompose.frontend.attendance_system.components.CourseFormDialog
+import com.markjayson545.mjdc_applicationcompose.frontend.attendance_system.components.CourseSortBottomSheet
 import com.markjayson545.mjdc_applicationcompose.frontend.attendance_system.components.DeleteConfirmationDialog
 import com.markjayson545.mjdc_applicationcompose.frontend.attendance_system.components.EmptyStateView
+import com.markjayson545.mjdc_applicationcompose.frontend.attendance_system.components.FilterSortRow
 import com.markjayson545.mjdc_applicationcompose.frontend.attendance_system.components.InfoBanner
 import com.markjayson545.mjdc_applicationcompose.frontend.attendance_system.components.SearchBar
 import com.markjayson545.mjdc_applicationcompose.frontend.attendance_system.components.SuccessBanner
@@ -53,7 +57,7 @@ import com.markjayson545.mjdc_applicationcompose.frontend.attendance_system.util
 import com.markjayson545.mjdc_applicationcompose.frontend.attendance_system.utils.bouncyExitTransition
 import kotlinx.coroutines.delay
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun ManageCoursesScreen(
     navController: NavController,
@@ -79,6 +83,10 @@ fun ManageCoursesScreen(
     var successMessage by remember { mutableStateOf("") }
     var showContent by remember { mutableStateOf(false) }
 
+    // Sort state (not persistent - in-memory only)
+    var sortOption by remember { mutableStateOf(CourseSortOption.NAME_ASC) }
+    var showSortSheet by remember { mutableStateOf(false) }
+
     var previousCourseCount by remember { mutableStateOf(courses.size) }
     LaunchedEffect(courses.size) {
         if (courses.size > previousCourseCount) {
@@ -95,16 +103,24 @@ fun ManageCoursesScreen(
         showContent = true
     }
 
-    val filteredCourses = remember(courses, searchQuery) {
-        if (searchQuery.isBlank()) courses
+    fun getStudentCountForCourse(courseId: String): Int {
+        return students.count { it.courseId == courseId }
+    }
+
+    val filteredCourses = remember(courses, searchQuery, sortOption, students) {
+        var list = if (searchQuery.isBlank()) courses
         else courses.filter {
             it.courseName.contains(searchQuery, ignoreCase = true) ||
                     it.courseCode.contains(searchQuery, ignoreCase = true)
         }
-    }
 
-    fun getStudentCountForCourse(courseId: String): Int {
-        return students.count { it.courseId == courseId }
+        // Apply sorting
+        when (sortOption) {
+            CourseSortOption.NAME_ASC -> list.sortedBy { it.courseName }
+            CourseSortOption.NAME_DESC -> list.sortedByDescending { it.courseName }
+            CourseSortOption.STUDENT_COUNT_ASC -> list.sortedBy { getStudentCountForCourse(it.courseId) }
+            CourseSortOption.STUDENT_COUNT_DESC -> list.sortedByDescending { getStudentCountForCourse(it.courseId) }
+        }
     }
 
     LaunchedEffect(currentTeacher) {
@@ -191,7 +207,23 @@ fun ManageCoursesScreen(
                     query = searchQuery,
                     onQueryChange = { searchQuery = it },
                     placeholder = "Search courses...",
-                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
+                    modifier = Modifier
+                        .padding(horizontal = 12.dp)
+                )
+            }
+
+            // Sort Row
+            AnimatedVisibility(
+                visible = showContent && courses.isNotEmpty(),
+                enter = bouncyEnterTransition(fromBottom = false)
+            ) {
+                FilterSortRow(
+                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
+                    hasActiveFilters = false,
+                    activeFilterCount = 0,
+                    onFilterClick = { /* No filters for courses */ },
+                    sortLabel = sortOption.label,
+                    onSortClick = { showSortSheet = true }
                 )
             }
 
@@ -200,7 +232,12 @@ fun ManageCoursesScreen(
                     modifier = Modifier.fillMaxSize(),
                     contentAlignment = Alignment.Center
                 ) {
-                    CircularProgressIndicator()
+                    CircularWavyProgressIndicator()
+                    Text(
+                        "Loading...",
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
                 }
             } else if (filteredCourses.isEmpty()) {
                 AnimatedVisibility(
@@ -319,4 +356,12 @@ fun ManageCoursesScreen(
             }
         )
     }
+
+    // Sort Bottom Sheet
+    CourseSortBottomSheet(
+        isVisible = showSortSheet,
+        currentSort = sortOption,
+        onSortSelected = { sortOption = it },
+        onDismiss = { showSortSheet = false }
+    )
 }

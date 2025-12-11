@@ -7,13 +7,21 @@ import com.markjayson545.mjdc_applicationcompose.backend.AttendanceSystemDatabas
 import com.markjayson545.mjdc_applicationcompose.backend.attendance_system.model.Student
 import com.markjayson545.mjdc_applicationcompose.backend.attendance_system.model.StudentWithAttendance
 import com.markjayson545.mjdc_applicationcompose.backend.attendance_system.model.StudentWithTeachers
+import com.markjayson545.mjdc_applicationcompose.bridge.export.ImportResult
 import com.markjayson545.mjdc_applicationcompose.bridge.repository.StudentCreationResult
 import com.markjayson545.mjdc_applicationcompose.bridge.repository.StudentRepository
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import java.io.InputStream
+import java.io.OutputStream
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 /**
  * ViewModel for Student Management
@@ -60,6 +68,12 @@ class StudentViewModel(
 
     private val _errorMessage = MutableStateFlow<String?>(null)
     val errorMessage: StateFlow<String?> = _errorMessage.asStateFlow()
+
+    private val _importResult = MutableStateFlow<ImportResult?>(null)
+    val importResult: StateFlow<ImportResult?> = _importResult.asStateFlow()
+
+    private val _exportSuccess = MutableStateFlow<Boolean?>(null)
+    val exportSuccess: StateFlow<Boolean?> = _exportSuccess.asStateFlow()
 
     // ========================================================================
     // INITIALIZATION
@@ -243,6 +257,94 @@ class StudentViewModel(
 
     suspend fun getStudentWithAttendance(studentId: String): StudentWithAttendance? {
         return repository.getStudentWithAttendance(studentId)
+    }
+
+    // ========================================================================
+    // IMPORT/EXPORT OPERATIONS
+    // ========================================================================
+
+    /**
+     * Generates a default filename for student export.
+     * Format: students_export_yyyy-MM-dd_HH-mm-ss.json
+     */
+    fun generateExportFilename(): String {
+        val dateFormat = SimpleDateFormat("yyyy-MM-dd_HH-mm-ss", Locale.getDefault())
+        return "students_export_${dateFormat.format(Date())}.json"
+    }
+
+    /**
+     * Exports students to a JSON file via OutputStream.
+     * Uses the current teacher's students.
+     */
+    fun exportStudents(students: List<Student>, outputStream: OutputStream) {
+        viewModelScope.launch {
+            _isLoading.value = true
+            try {
+                withContext(Dispatchers.IO) {
+                    val json = repository.exportStudentsToJson(students)
+                    outputStream.bufferedWriter().use { writer ->
+                        writer.write(json)
+                    }
+                }
+                _exportSuccess.value = true
+                _errorMessage.value = null
+            } catch (e: Exception) {
+                _exportSuccess.value = false
+                _errorMessage.value = e.message ?: "Failed to export students"
+            } finally {
+                _isLoading.value = false
+            }
+        }
+    }
+
+    /**
+     * Imports students from a JSON file via InputStream.
+     * Assigns all imported students to the specified teacher and optionally to a course.
+     */
+    fun importStudents(inputStream: InputStream, teacherId: String, courseId: String?) {
+        viewModelScope.launch {
+            _isLoading.value = true
+            try {
+                val json = withContext(Dispatchers.IO) {
+                    inputStream.bufferedReader().use { it.readText() }
+                }
+
+                val result = repository.importStudentsFromJson(json, teacherId, courseId)
+                _importResult.value = result
+
+                if (result.isSuccess) {
+                    // Reload students to reflect imported data
+                    loadStudentsByTeacher(teacherId)
+                    _errorMessage.value = null
+                } else {
+                    _errorMessage.value = result.errorMessage
+                }
+            } catch (e: Exception) {
+                _importResult.value = ImportResult(
+                    successCount = 0,
+                    skippedCount = 0,
+                    skippedNames = emptyList(),
+                    errorMessage = e.message ?: "Failed to import students"
+                )
+                _errorMessage.value = e.message ?: "Failed to import students"
+            } finally {
+                _isLoading.value = false
+            }
+        }
+    }
+
+    /**
+     * Clears the import result state after user acknowledges.
+     */
+    fun clearImportResult() {
+        _importResult.value = null
+    }
+
+    /**
+     * Clears the export success state after user acknowledges.
+     */
+    fun clearExportSuccess() {
+        _exportSuccess.value = null
     }
 
     // ========================================================================

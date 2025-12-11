@@ -46,3 +46,12 @@ enum class AttendanceStatus {
     LATE,
     EXCUSED
 }
+
+/**
+ * Data class for status count query results
+ */
+data class StatusCount(
+    val status: AttendanceStatus,
+    val count: Int
+)
+

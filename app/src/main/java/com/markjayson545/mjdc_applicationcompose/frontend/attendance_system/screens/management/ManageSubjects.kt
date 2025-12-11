@@ -1,11 +1,10 @@
-package com.markjayson545.mjdc_applicationcompose.frontend.attendance_system.screens
+package com.markjayson545.mjdc_applicationcompose.frontend.attendance_system.screens.management
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -23,12 +22,10 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.MenuBook
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Book
-import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Search
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -36,15 +33,12 @@ import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExtendedFloatingActionButton
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberModalBottomSheetState
@@ -67,12 +61,17 @@ import androidx.navigation.NavController
 import com.markjayson545.mjdc_applicationcompose.backend.attendance_system.model.Course
 import com.markjayson545.mjdc_applicationcompose.backend.attendance_system.model.Subject
 import com.markjayson545.mjdc_applicationcompose.bridge.SharedViewModels
+import com.markjayson545.mjdc_applicationcompose.bridge.viewmodels.SubjectViewModel
 import com.markjayson545.mjdc_applicationcompose.frontend.attendance_system.components.CompactItemCard
 import com.markjayson545.mjdc_applicationcompose.frontend.attendance_system.components.DeleteConfirmationDialog
 import com.markjayson545.mjdc_applicationcompose.frontend.attendance_system.components.EmptyStateView
+import com.markjayson545.mjdc_applicationcompose.frontend.attendance_system.components.FilterSortRow
 import com.markjayson545.mjdc_applicationcompose.frontend.attendance_system.components.InfoBanner
 import com.markjayson545.mjdc_applicationcompose.frontend.attendance_system.components.SearchBar
+import com.markjayson545.mjdc_applicationcompose.frontend.attendance_system.components.SubjectEnrollmentBottomSheet
 import com.markjayson545.mjdc_applicationcompose.frontend.attendance_system.components.SubjectFormDialog
+import com.markjayson545.mjdc_applicationcompose.frontend.attendance_system.components.SubjectSortBottomSheet
+import com.markjayson545.mjdc_applicationcompose.frontend.attendance_system.components.SubjectSortOption
 import com.markjayson545.mjdc_applicationcompose.frontend.attendance_system.components.SuccessBanner
 import com.markjayson545.mjdc_applicationcompose.frontend.attendance_system.utils.bouncyEnterTransition
 import com.markjayson545.mjdc_applicationcompose.frontend.attendance_system.utils.bouncyExitTransition
@@ -90,11 +89,16 @@ fun ManageSubjectsScreen(
     val teacherViewModel = sharedViewModels.teacherViewModel
     val subjectViewModel = sharedViewModels.subjectViewModel
     val courseViewModel = sharedViewModels.courseViewModel
+    val studentViewModel = sharedViewModels.studentViewModel
+    val enrollmentViewModel = sharedViewModels.enrollmentViewModel
 
     val currentTeacher by teacherViewModel.currentTeacher.collectAsState()
     val subjects by subjectViewModel.teacherSubjects.collectAsState()
     val courses by courseViewModel.teacherCourses.collectAsState()
+    val students by studentViewModel.teacherStudents.collectAsState()
     val isLoading by subjectViewModel.isLoading.collectAsState()
+    val enrollmentCounts by enrollmentViewModel.subjectEnrollmentCounts.collectAsState()
+    val enrolledStudentIds by enrollmentViewModel.enrolledStudentIds.collectAsState()
 
     var searchQuery by remember { mutableStateOf("") }
     var showAddDialog by remember { mutableStateOf(false) }
@@ -105,6 +109,11 @@ fun ManageSubjectsScreen(
     var showSuccessBanner by remember { mutableStateOf(false) }
     var successMessage by remember { mutableStateOf("") }
     var showContent by remember { mutableStateOf(false) }
+    var showEnrollmentSheet by remember { mutableStateOf(false) }
+
+    // Sort state (not persistent - in-memory only)
+    var sortOption by remember { mutableStateOf(SubjectSortOption.NAME_ASC) }
+    var showSortSheet by remember { mutableStateOf(false) }
 
     var previousSubjectCount by remember { mutableIntStateOf(subjects.size) }
     LaunchedEffect(subjects.size) {
@@ -122,11 +131,19 @@ fun ManageSubjectsScreen(
         showContent = true
     }
 
-    val filteredSubjects = remember(subjects, searchQuery) {
-        if (searchQuery.isBlank()) subjects
+    val filteredSubjects = remember(subjects, searchQuery, sortOption) {
+        var list = if (searchQuery.isBlank()) subjects
         else subjects.filter {
             it.subjectName.contains(searchQuery, ignoreCase = true) ||
                     it.subjectCode.contains(searchQuery, ignoreCase = true)
+        }
+
+        // Apply sorting
+        when (sortOption) {
+            SubjectSortOption.NAME_ASC -> list.sortedBy { it.subjectName }
+            SubjectSortOption.NAME_DESC -> list.sortedByDescending { it.subjectName }
+            SubjectSortOption.CODE_ASC -> list.sortedBy { it.subjectCode }
+            SubjectSortOption.CODE_DESC -> list.sortedByDescending { it.subjectCode }
         }
     }
 
@@ -134,6 +151,14 @@ fun ManageSubjectsScreen(
         currentTeacher?.let {
             subjectViewModel.loadSubjectsByTeacher(it.teacherId)
             courseViewModel.loadCoursesByTeacher(it.teacherId)
+            studentViewModel.loadStudentsByTeacher(it.teacherId)
+        }
+    }
+
+    // Load enrollment counts when subjects change
+    LaunchedEffect(subjects) {
+        if (subjects.isNotEmpty()) {
+            enrollmentViewModel.loadEnrollmentCountsForSubjects(subjects)
         }
     }
 
@@ -214,7 +239,24 @@ fun ManageSubjectsScreen(
                     query = searchQuery,
                     onQueryChange = { searchQuery = it },
                     placeholder = "Search subjects...",
-                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 12.dp)
+                )
+            }
+
+            // Sort Row
+            AnimatedVisibility(
+                visible = showContent && subjects.isNotEmpty(),
+                enter = bouncyEnterTransition(fromBottom = false)
+            ) {
+                FilterSortRow(
+                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
+                    hasActiveFilters = false,
+                    activeFilterCount = 0,
+                    onFilterClick = { /* No filters for subjects */ },
+                    sortLabel = sortOption.label,
+                    onSortClick = { showSortSheet = true }
                 )
             }
 
@@ -258,11 +300,18 @@ fun ManageSubjectsScreen(
                             visible = showContent,
                             enter = bouncyEnterTransition(index = index)
                         ) {
+                            val enrollmentCount = enrollmentCounts[subject.subjectId] ?: 0
                             CompactItemCard(
                                 icon = Icons.AutoMirrored.Filled.MenuBook,
                                 iconTint = Color(0xFFFF9800),
                                 title = subject.subjectName,
                                 subtitle = subject.subjectCode + if (subject.description.isNotEmpty()) " • ${subject.description}" else "",
+                                secondaryBadge = if (enrollmentCount > 0) "$enrollmentCount student${if (enrollmentCount != 1) "s" else ""}" else null,
+                                onEnroll = {
+                                    selectedSubject = subject
+                                    enrollmentViewModel.loadEnrolledStudentsForSubject(subject.subjectId)
+                                    showEnrollmentSheet = true
+                                },
                                 onEdit = {
                                     selectedSubject = subject
                                     showEditDialog = true
@@ -355,6 +404,36 @@ fun ManageSubjectsScreen(
             }
         )
     }
+
+    // Sort Bottom Sheet
+    SubjectSortBottomSheet(
+        isVisible = showSortSheet,
+        currentSort = sortOption,
+        onSortSelected = { sortOption = it },
+        onDismiss = { showSortSheet = false }
+    )
+
+    // Enrollment Bottom Sheet
+    SubjectEnrollmentBottomSheet(
+        isVisible = showEnrollmentSheet,
+        subject = selectedSubject,
+        students = students,
+        enrolledStudentIds = enrolledStudentIds,
+        onSave = { newStudentIds ->
+            selectedSubject?.let { subject ->
+                enrollmentViewModel.updateSubjectEnrollments(subject.subjectId, newStudentIds)
+                successMessage = "Enrollment updated successfully!"
+                showSuccessBanner = true
+            }
+            showEnrollmentSheet = false
+            selectedSubject = null
+        },
+        onDismiss = {
+            showEnrollmentSheet = false
+            selectedSubject = null
+            enrollmentViewModel.clearEnrolledStudentIds()
+        }
+    )
 }
 
 @OptIn(ExperimentalLayoutApi::class)
@@ -445,7 +524,7 @@ private fun SubjectCard(
 private fun ManageSubjectCoursesSheet(
     subject: Subject,
     allCourses: List<Course>,
-    subjectViewModel: com.markjayson545.mjdc_applicationcompose.bridge.viewmodels.SubjectViewModel,
+    subjectViewModel: SubjectViewModel,
     onDismiss: () -> Unit
 ) {
     val sheetState = rememberModalBottomSheetState()

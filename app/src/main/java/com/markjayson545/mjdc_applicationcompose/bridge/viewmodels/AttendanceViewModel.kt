@@ -122,6 +122,18 @@ class AttendanceViewModel(
         }
     }
 
+    /**
+     * Loads check-ins for a specific date and teacher.
+     * Updates [todayCheckIns] StateFlow (reused for selected date).
+     */
+    fun loadCheckInsByDate(teacherId: String, date: String) {
+        viewModelScope.launch {
+            repository.getCheckInsByDateAndTeacher(date, teacherId).collect { checkInList ->
+                _todayCheckIns.value = checkInList
+            }
+        }
+    }
+
     // ========================================================================
     // FLOW ACCESSORS (for direct collection in UI)
     // ========================================================================
@@ -214,13 +226,17 @@ class AttendanceViewModel(
 
     /**
      * Updates an existing attendance record.
+     * @param checkIn The updated check-in object
+     * @param date The date to reload check-ins for (optional, uses check-in date if null)
      */
-    fun updateAttendance(checkIn: CheckIns) {
+    fun updateAttendance(checkIn: CheckIns, date: String? = null) {
         viewModelScope.launch {
             _isLoading.value = true
             try {
                 repository.updateAttendance(checkIn)
                 _errorMessage.value = null
+                // Reload check-ins for the date
+                loadCheckInsByDate(checkIn.teacherId, date ?: checkIn.checkInDate)
             } catch (e: Exception) {
                 _errorMessage.value = e.message ?: "Failed to update attendance"
             } finally {
@@ -231,13 +247,17 @@ class AttendanceViewModel(
 
     /**
      * Deletes an attendance record.
+     * @param checkIn The check-in to delete
+     * @param date The date to reload check-ins for (optional, uses check-in date if null)
      */
-    fun deleteAttendance(checkIn: CheckIns) {
+    fun deleteAttendance(checkIn: CheckIns, date: String? = null) {
         viewModelScope.launch {
             _isLoading.value = true
             try {
                 repository.deleteAttendance(checkIn)
                 _errorMessage.value = null
+                // Reload check-ins for the date
+                loadCheckInsByDate(checkIn.teacherId, date ?: checkIn.checkInDate)
             } catch (e: Exception) {
                 _errorMessage.value = e.message ?: "Failed to delete attendance"
             } finally {

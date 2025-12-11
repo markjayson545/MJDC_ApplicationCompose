@@ -528,6 +528,94 @@ class AttendanceRepository(
     }
 
     // ========================================================================
+    // FILTER & SORT OPERATIONS
+    // ========================================================================
+
+    /**
+     * Retrieves check-ins for a teacher within a date range.
+     *
+     * USE CASE: Filtering attendance by date range
+     *
+     * @param teacherId Teacher's unique identifier
+     * @param startDate Start date in "yyyy-MM-dd" format
+     * @param endDate End date in "yyyy-MM-dd" format
+     * @return Flow of filtered check-ins
+     */
+    fun getCheckInsByDateRange(
+        teacherId: String,
+        startDate: String,
+        endDate: String
+    ): Flow<List<CheckIns>> {
+        return checkInsDao.getCheckInsByTeacherAndDateRange(teacherId, startDate, endDate)
+    }
+
+    /**
+     * Retrieves check-ins for a teacher filtered by statuses.
+     *
+     * USE CASE: Filtering attendance by status (e.g., show only absent students)
+     *
+     * @param teacherId Teacher's unique identifier
+     * @param statuses List of statuses to filter by
+     * @return Flow of filtered check-ins
+     */
+    fun getCheckInsByStatuses(
+        teacherId: String,
+        statuses: List<AttendanceStatus>
+    ): Flow<List<CheckIns>> {
+        return checkInsDao.getCheckInsByTeacherAndStatuses(teacherId, statuses)
+    }
+
+    /**
+     * Retrieves filtered check-ins with optional subject filter and date range.
+     *
+     * USE CASE: Combined filtering for attendance management screen
+     *
+     * @param teacherId Teacher's unique identifier
+     * @param subjectId Optional subject filter (null for all subjects)
+     * @param startDate Start date in "yyyy-MM-dd" format
+     * @param endDate End date in "yyyy-MM-dd" format
+     * @return Flow of filtered check-ins
+     */
+    fun getFilteredCheckIns(
+        teacherId: String,
+        subjectId: String?,
+        startDate: String,
+        endDate: String
+    ): Flow<List<CheckIns>> {
+        return checkInsDao.getFilteredCheckIns(teacherId, subjectId, startDate, endDate)
+    }
+
+    /**
+     * Gets the date range for a preset filter option.
+     *
+     * @param preset Date range preset (TODAY, THIS_WEEK, THIS_MONTH, ALL)
+     * @return Pair of (startDate, endDate) in "yyyy-MM-dd" format
+     */
+    fun getDateRangeForPreset(preset: String): Pair<String, String> {
+        val calendar = java.util.Calendar.getInstance()
+        val today = dateFormat.format(calendar.time)
+
+        return when (preset) {
+            "TODAY" -> Pair(today, today)
+            "THIS_WEEK" -> {
+                calendar.set(java.util.Calendar.DAY_OF_WEEK, calendar.firstDayOfWeek)
+                val startOfWeek = dateFormat.format(calendar.time)
+                calendar.add(java.util.Calendar.DAY_OF_WEEK, 6)
+                val endOfWeek = dateFormat.format(calendar.time)
+                Pair(startOfWeek, endOfWeek)
+            }
+            "THIS_MONTH" -> {
+                calendar.set(java.util.Calendar.DAY_OF_MONTH, 1)
+                val startOfMonth = dateFormat.format(calendar.time)
+                calendar.set(java.util.Calendar.DAY_OF_MONTH, calendar.getActualMaximum(java.util.Calendar.DAY_OF_MONTH))
+                val endOfMonth = dateFormat.format(calendar.time)
+                Pair(startOfMonth, endOfMonth)
+            }
+            else -> Pair("1970-01-01", "2100-12-31") // ALL - effectively no date filter
+        }
+    }
+
+    // ========================================================================
     // UTILITY OPERATIONS
     // ========================================================================
 

@@ -6,6 +6,7 @@ import androidx.lifecycle.ViewModelProvider
 import com.markjayson545.mjdc_applicationcompose.backend.AttendanceSystemDatabase
 import com.markjayson545.mjdc_applicationcompose.bridge.viewmodels.AttendanceViewModel
 import com.markjayson545.mjdc_applicationcompose.bridge.viewmodels.CourseViewModel
+import com.markjayson545.mjdc_applicationcompose.bridge.viewmodels.EnrollmentViewModel
 import com.markjayson545.mjdc_applicationcompose.bridge.viewmodels.StudentViewModel
 import com.markjayson545.mjdc_applicationcompose.bridge.viewmodels.SubjectViewModel
 import com.markjayson545.mjdc_applicationcompose.bridge.viewmodels.TeacherViewModel
@@ -65,6 +66,10 @@ class SharedViewModels(
 
     val attendanceViewModel: AttendanceViewModel by lazy {
         AttendanceViewModel(repositoryProvider.attendanceRepository)
+    }
+
+    val enrollmentViewModel: EnrollmentViewModel by lazy {
+        EnrollmentViewModel(repositoryProvider.enrollmentRepository)
     }
 
     // ========================================================================

@@ -8,6 +8,7 @@ import com.markjayson545.mjdc_applicationcompose.backend.attendance_system.dao.C
 import com.markjayson545.mjdc_applicationcompose.backend.attendance_system.dao.CourseDao
 import com.markjayson545.mjdc_applicationcompose.backend.attendance_system.dao.CourseSubjectCrossRefDao
 import com.markjayson545.mjdc_applicationcompose.backend.attendance_system.dao.StudentDao
+import com.markjayson545.mjdc_applicationcompose.backend.attendance_system.dao.StudentSubjectCrossRefDao
 import com.markjayson545.mjdc_applicationcompose.backend.attendance_system.dao.SubjectDao
 import com.markjayson545.mjdc_applicationcompose.backend.attendance_system.dao.TeacherDao
 import com.markjayson545.mjdc_applicationcompose.backend.attendance_system.dao.TeacherStudentCrossRefDao
@@ -15,6 +16,7 @@ import com.markjayson545.mjdc_applicationcompose.backend.attendance_system.model
 import com.markjayson545.mjdc_applicationcompose.backend.attendance_system.model.Course
 import com.markjayson545.mjdc_applicationcompose.backend.attendance_system.model.CourseSubjectCrossRef
 import com.markjayson545.mjdc_applicationcompose.backend.attendance_system.model.Student
+import com.markjayson545.mjdc_applicationcompose.backend.attendance_system.model.StudentSubjectCrossRef
 import com.markjayson545.mjdc_applicationcompose.backend.attendance_system.model.Subject
 import com.markjayson545.mjdc_applicationcompose.backend.attendance_system.model.Teacher
 import com.markjayson545.mjdc_applicationcompose.backend.attendance_system.model.TeacherStudentCrossRef
@@ -27,9 +29,10 @@ import com.markjayson545.mjdc_applicationcompose.backend.attendance_system.model
         Subject::class,
         CheckIns::class,
         TeacherStudentCrossRef::class,
-        CourseSubjectCrossRef::class
+        CourseSubjectCrossRef::class,
+        StudentSubjectCrossRef::class
     ],
-    version = 1,
+    version = 2,
     exportSchema = false
 )
 abstract class AttendanceSystemDatabase : RoomDatabase() {
@@ -41,6 +44,7 @@ abstract class AttendanceSystemDatabase : RoomDatabase() {
     abstract fun checkInsDao(): CheckInsDao
     abstract fun teacherStudentCrossRefDao(): TeacherStudentCrossRefDao
     abstract fun courseSubjectCrossRefDao(): CourseSubjectCrossRefDao
+    abstract fun studentSubjectCrossRefDao(): StudentSubjectCrossRefDao
 
     companion object {
         private const val DATABASE_NAME = "attendance_system_database"

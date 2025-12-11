@@ -3,6 +3,7 @@ package com.markjayson545.mjdc_applicationcompose.bridge
 import com.markjayson545.mjdc_applicationcompose.backend.AttendanceSystemDatabase
 import com.markjayson545.mjdc_applicationcompose.bridge.repository.AttendanceRepository
 import com.markjayson545.mjdc_applicationcompose.bridge.repository.CourseRepository
+import com.markjayson545.mjdc_applicationcompose.bridge.repository.EnrollmentRepository
 import com.markjayson545.mjdc_applicationcompose.bridge.repository.StudentRepository
 import com.markjayson545.mjdc_applicationcompose.bridge.repository.SubjectRepository
 import com.markjayson545.mjdc_applicationcompose.bridge.repository.TeacherRepository
@@ -140,6 +141,20 @@ class RepositoryProvider(
      */
     val attendanceRepository: AttendanceRepository by lazy {
         AttendanceRepository(database.checkInsDao())
+    }
+
+    /**
+     * Repository for enrollment-related business logic.
+     *
+     * HANDLES:
+     * - Student-subject enrollment management
+     * - Bulk enrollment operations
+     * - Enrollment queries for attendance filtering
+     *
+     * @see com.markjayson545.mjdc_applicationcompose.bridge.repository.EnrollmentRepository
+     */
+    val enrollmentRepository: EnrollmentRepository by lazy {
+        EnrollmentRepository(database.studentSubjectCrossRefDao())
     }
 }
 

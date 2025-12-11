@@ -126,3 +126,31 @@ data class StudentWithCourse(
     )
     val course: Course?
 )
+
+/**
+ * Compound model representing a Student with their enrolled Subjects.
+ * Used for displaying which subjects a student is enrolled in.
+ */
+data class StudentWithSubjects(
+    @Embedded val student: Student,
+    @Relation(
+        parentColumn = "studentId",
+        entityColumn = "subjectId",
+        associateBy = Junction(StudentSubjectCrossRef::class)
+    )
+    val subjects: List<Subject>
+)
+
+/**
+ * Compound model representing a Subject with its enrolled Students.
+ * Used for filtering attendance to show only enrolled students.
+ */
+data class SubjectWithEnrolledStudents(
+    @Embedded val subject: Subject,
+    @Relation(
+        parentColumn = "subjectId",
+        entityColumn = "studentId",
+        associateBy = Junction(StudentSubjectCrossRef::class)
+    )
+    val enrolledStudents: List<Student>
+)

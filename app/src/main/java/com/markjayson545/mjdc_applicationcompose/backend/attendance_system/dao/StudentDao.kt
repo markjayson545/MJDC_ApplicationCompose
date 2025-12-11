@@ -127,4 +127,15 @@ interface StudentDao {
     // Check if a specific student ID exists
     @Query("SELECT EXISTS(SELECT 1 FROM students WHERE studentId = :studentId)")
     suspend fun studentIdExists(studentId: String): Boolean
+
+    // Check if a student with the same name already exists (case-insensitive)
+    @Query("""
+        SELECT EXISTS(
+            SELECT 1 FROM students 
+            WHERE LOWER(firstName) = LOWER(:firstName) 
+            AND LOWER(middleName) = LOWER(:middleName) 
+            AND LOWER(lastName) = LOWER(:lastName)
+        )
+    """)
+    suspend fun studentExistsByName(firstName: String, middleName: String, lastName: String): Boolean
 }

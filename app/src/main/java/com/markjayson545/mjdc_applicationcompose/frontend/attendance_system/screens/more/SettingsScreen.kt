@@ -44,7 +44,7 @@
  * @param sharedViewModels Shared ViewModels containing all app state
  * @param onMenuClick Callback to open the navigation drawer
  */
-package com.markjayson545.mjdc_applicationcompose.frontend.attendance_system.screens
+package com.markjayson545.mjdc_applicationcompose.frontend.attendance_system.screens.more
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
@@ -61,6 +61,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -75,6 +77,7 @@ import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Save
+import androidx.compose.material.icons.filled.TextFormat
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -87,6 +90,7 @@ import androidx.compose.material3.LargeTopAppBar
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -106,12 +110,18 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
+import com.markjayson545.mjdc_applicationcompose.backend.attendance_system.model.Teacher
 import com.markjayson545.mjdc_applicationcompose.bridge.SharedViewModels
+import com.markjayson545.mjdc_applicationcompose.bridge.preferences.AppPreferences
+import com.markjayson545.mjdc_applicationcompose.bridge.preferences.StudentNameFormat
 import com.markjayson545.mjdc_applicationcompose.frontend.attendance_system.navigator.AuthRoutes
 import com.markjayson545.mjdc_applicationcompose.frontend.attendance_system.utils.bouncyEnterTransition
+import kotlinx.coroutines.delay
 
 /**
  * Settings screen composable displaying profile and app settings.
@@ -129,6 +139,14 @@ fun SettingsScreen(
 ) {
     val scrollBehavior =
         TopAppBarDefaults.exitUntilCollapsedScrollBehavior(rememberTopAppBarState())
+
+    // Get context for SharedPreferences
+    val context = LocalContext.current
+
+    // Initialize AppPreferences
+    LaunchedEffect(Unit) {
+        AppPreferences.init(context)
+    }
 
     // ========================================================================
     // STATE COLLECTION FROM VIEWMODELS
@@ -149,6 +167,9 @@ fun SettingsScreen(
     val subjects by subjectViewModel.teacherSubjects.collectAsState()
     val checkIns by attendanceViewModel.teacherCheckIns.collectAsState()
 
+    // Name format preference
+    val currentNameFormat by AppPreferences.studentNameFormat.collectAsState()
+
     // ========================================================================
     // LOCAL UI STATE
     // ========================================================================
@@ -156,6 +177,7 @@ fun SettingsScreen(
     var showContent by remember { mutableStateOf(false) }
     var showEditDialog by remember { mutableStateOf(false) }
     var showLogoutDialog by remember { mutableStateOf(false) }
+    var showNameFormatDialog by remember { mutableStateOf(false) }
 
     // Edit form state
     var editFirstName by remember(currentTeacher) {
@@ -185,7 +207,7 @@ fun SettingsScreen(
     }
 
     LaunchedEffect(Unit) {
-        kotlinx.coroutines.delay(100)
+        delay(100)
         showContent = true
     }
 
@@ -246,12 +268,100 @@ fun SettingsScreen(
             }
 
             // ================================================================
-            // ACCOUNT STATISTICS
+            // DISPLAY SETTINGS
             // ================================================================
             item {
                 AnimatedVisibility(
                     visible = showContent,
                     enter = bouncyEnterTransition(index = 1)
+                ) {
+                    Column {
+                        Text(
+                            "Display Settings",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.SemiBold,
+                            modifier = Modifier.padding(bottom = 12.dp)
+                        )
+
+                        Card(
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(16.dp),
+                            colors = CardDefaults.cardColors(
+                                containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                            )
+                        ) {
+                            Column(
+                                modifier = Modifier.padding(16.dp)
+                            ) {
+                                // Name Format Setting
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clip(RoundedCornerShape(12.dp))
+                                        .selectable(
+                                            selected = false,
+                                            onClick = { showNameFormatDialog = true },
+                                            role = Role.Button
+                                        )
+                                        .padding(12.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(40.dp)
+                                            .clip(RoundedCornerShape(10.dp))
+                                            .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.TextFormat,
+                                            contentDescription = null,
+                                            tint = MaterialTheme.colorScheme.primary,
+                                            modifier = Modifier.size(24.dp)
+                                        )
+                                    }
+
+                                    Spacer(modifier = Modifier.width(12.dp))
+
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text(
+                                            text = "Student Name Format",
+                                            style = MaterialTheme.typography.bodyLarge,
+                                            fontWeight = FontWeight.Medium
+                                        )
+                                        Text(
+                                            text = currentNameFormat.displayName,
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                        Text(
+                                            text = "e.g., ${currentNameFormat.example}",
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.primary,
+                                            fontWeight = FontWeight.Medium
+                                        )
+                                    }
+
+                                    Icon(
+                                        imageVector = Icons.Default.Edit,
+                                        contentDescription = "Change",
+                                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            // ================================================================
+            // ACCOUNT STATISTICS
+            // ================================================================
+            item {
+                AnimatedVisibility(
+                    visible = showContent,
+                    enter = bouncyEnterTransition(index = 2)
                 ) {
                     Column {
                         Text(
@@ -277,7 +387,7 @@ fun SettingsScreen(
             item {
                 AnimatedVisibility(
                     visible = showContent,
-                    enter = bouncyEnterTransition(index = 2)
+                    enter = bouncyEnterTransition(index = 3)
                 ) {
                     Column {
                         Text(
@@ -326,7 +436,7 @@ fun SettingsScreen(
             item {
                 AnimatedVisibility(
                     visible = showContent,
-                    enter = bouncyEnterTransition(index = 3)
+                    enter = bouncyEnterTransition(index = 4)
                 ) {
                     Column(
                         modifier = Modifier
@@ -480,6 +590,83 @@ fun SettingsScreen(
             }
         )
     }
+
+    // Name Format Dialog
+    if (showNameFormatDialog) {
+        AlertDialog(
+            onDismissRequest = { showNameFormatDialog = false },
+            icon = {
+                Icon(
+                    imageVector = Icons.Default.TextFormat,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary
+                )
+            },
+            title = { Text("Student Name Format") },
+            text = {
+                Column(
+                    modifier = Modifier.selectableGroup(),
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    Text(
+                        text = "Choose how student names are displayed:",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(bottom = 8.dp)
+                    )
+
+                    StudentNameFormat.entries.forEach { format ->
+                        val isSelected = format == currentNameFormat
+
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(8.dp))
+                                .selectable(
+                                    selected = isSelected,
+                                    onClick = {
+                                        AppPreferences.setStudentNameFormat(format)
+                                    },
+                                    role = Role.RadioButton
+                                )
+                                .background(
+                                    if (isSelected) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f)
+                                    else Color.Transparent
+                                )
+                                .padding(12.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            RadioButton(
+                                selected = isSelected,
+                                onClick = null // handled by Row
+                            )
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Column {
+                                Text(
+                                    text = format.displayName,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal
+                                )
+                                Text(
+                                    text = format.example,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = if (isSelected)
+                                        MaterialTheme.colorScheme.primary
+                                    else
+                                        MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                Button(onClick = { showNameFormatDialog = false }) {
+                    Text("Done")
+                }
+            }
+        )
+    }
 }
 
 // ============================================================================
@@ -491,7 +678,7 @@ fun SettingsScreen(
  */
 @Composable
 private fun ProfileCard(
-    teacher: com.markjayson545.mjdc_applicationcompose.backend.attendance_system.model.Teacher?,
+    teacher: Teacher?,
     onEditClick: () -> Unit
 ) {
     Card(

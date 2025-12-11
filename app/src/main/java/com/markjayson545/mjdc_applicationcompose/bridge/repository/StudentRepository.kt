@@ -6,7 +6,14 @@ import com.markjayson545.mjdc_applicationcompose.backend.attendance_system.model
 import com.markjayson545.mjdc_applicationcompose.backend.attendance_system.model.StudentWithAttendance
 import com.markjayson545.mjdc_applicationcompose.backend.attendance_system.model.StudentWithTeachers
 import com.markjayson545.mjdc_applicationcompose.backend.attendance_system.model.TeacherStudentCrossRef
+import com.markjayson545.mjdc_applicationcompose.bridge.export.ImportResult
+import com.markjayson545.mjdc_applicationcompose.bridge.export.StudentExportData
+import com.markjayson545.mjdc_applicationcompose.bridge.export.StudentsExportWrapper
 import kotlinx.coroutines.flow.Flow
+import kotlinx.serialization.json.Json
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 /**
  * ============================================================================
@@ -396,6 +403,125 @@ class StudentRepository(
      */
     suspend fun getStudentCountForTeacher(teacherId: String): Int {
         return teacherStudentCrossRefDao.getStudentCountForTeacher(teacherId)
+    }
+
+    // ========================================================================
+    // IMPORT/EXPORT OPERATIONS
+    // ========================================================================
+
+    /**
+     * Exports a list of students to JSON format.
+     *
+     * EXPORT FORMAT:
+     * - Contains only name fields (firstName, middleName, lastName)
+     * - Wrapped with metadata (exportDate, studentCount)
+     * - studentId and courseId are excluded (regenerated on import)
+     *
+     * @param students List of students to export
+     * @return JSON string representation
+     */
+    fun exportStudentsToJson(students: List<Student>): String {
+        val exportData = students.map { student ->
+            StudentExportData(
+                firstName = student.firstName,
+                middleName = student.middleName,
+                lastName = student.lastName
+            )
+        }
+
+        val dateFormat = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.getDefault())
+        val wrapper = StudentsExportWrapper(
+            exportDate = dateFormat.format(Date()),
+            studentCount = exportData.size,
+            students = exportData
+        )
+
+        return Json.encodeToString(StudentsExportWrapper.serializer(), wrapper)
+    }
+
+    /**
+     * Imports students from a JSON string.
+     *
+     * IMPORT BEHAVIOR:
+     * - Parses JSON to extract student name data
+     * - Checks for duplicates by full name (case-insensitive)
+     * - Generates new studentId for each imported student
+     * - Assigns all imported students to the specified teacher
+     * - Optionally assigns all students to a course
+     *
+     * DUPLICATE DETECTION:
+     * - Matches by firstName + middleName + lastName (case-insensitive)
+     * - Duplicates are skipped, not overwritten
+     *
+     * @param json JSON string containing student data
+     * @param teacherId Teacher to assign imported students to
+     * @param courseId Optional course to assign to all imported students
+     * @return ImportResult with success/skip counts and details
+     */
+    suspend fun importStudentsFromJson(
+        json: String,
+        teacherId: String,
+        courseId: String?
+    ): ImportResult {
+        return try {
+            val wrapper = Json.decodeFromString(StudentsExportWrapper.serializer(), json)
+
+            var successCount = 0
+            val skippedNames = mutableListOf<String>()
+
+            for (studentData in wrapper.students) {
+                // Check for duplicate by name (case-insensitive)
+                val exists = studentDao.studentExistsByName(
+                    firstName = studentData.firstName,
+                    middleName = studentData.middleName,
+                    lastName = studentData.lastName
+                )
+
+                if (exists) {
+                    skippedNames.add(studentData.fullName)
+                } else {
+                    // Create new student with generated ID
+                    val result = createStudent(
+                        firstName = studentData.firstName,
+                        middleName = studentData.middleName,
+                        lastName = studentData.lastName,
+                        courseId = courseId,
+                        teacherId = teacherId
+                    )
+
+                    if (result is StudentCreationResult.Success) {
+                        successCount++
+                    } else if (result is StudentCreationResult.Error) {
+                        skippedNames.add("${studentData.fullName} (${result.message})")
+                    }
+                }
+            }
+
+            ImportResult(
+                successCount = successCount,
+                skippedCount = skippedNames.size,
+                skippedNames = skippedNames
+            )
+        } catch (e: Exception) {
+            ImportResult(
+                successCount = 0,
+                skippedCount = 0,
+                skippedNames = emptyList(),
+                errorMessage = "Failed to parse JSON: ${e.message}"
+            )
+        }
+    }
+
+    /**
+     * Checks if a student with the given name already exists.
+     *
+     * @param firstName Student's first name
+     * @param middleName Student's middle name
+     * @param lastName Student's last name
+     * @return true if a student with matching name exists
+     */
+    suspend fun studentExistsByName(firstName: String, middleName: String, lastName: String): Boolean {
+        return studentDao.studentExistsByName(firstName, middleName, lastName)
     }
 }
 
