@@ -1,4 +1,4 @@
-package com.markjayson545.mjdc_applicationcompose
+package com.markjayson545.mjdc_applicationcompose.frontend
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box

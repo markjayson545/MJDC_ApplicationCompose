@@ -1,4 +1,4 @@
-package com.markjayson545.mjdc_applicationcompose
+package com.markjayson545.mjdc_applicationcompose.frontend
 
 import android.widget.Toast
 import androidx.compose.foundation.layout.Arrangement
@@ -97,7 +97,7 @@ fun LoginScreen(navController: NavController) {
                     modifier = Modifier.align(Alignment.CenterHorizontally),
                     enabled = isLoginEnabled.value,
                     onClick = {
-                        if (usernameTextFieldValue.value == "admin" && passwordTextFieldValue.value == "88888") {
+                        if (usernameTextFieldValue.value == "MarkJay" && passwordTextFieldValue.value == "markjay") {
                             val username = usernameTextFieldValue.value
                             usernameTextFieldValue.value = ""
                             passwordTextFieldValue.value = ""
